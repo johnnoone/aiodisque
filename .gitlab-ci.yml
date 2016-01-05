@@ -1,0 +1,18 @@
+---
+
+Prepare container:
+  stage: build
+  script:
+    - docker build -t errorist/aiodisque:latest .
+  tags:
+    - docker-build
+
+Test:
+  stage: test
+  image: errorist/aiodisque:latest
+  script:
+    - python -m pip install -e .
+    - python -m pip install -r requirements-test.txt
+    - py.test tests/ --cov aiodisque --cov-report term-missing --flake8
+  tags:
+    - python3.5
