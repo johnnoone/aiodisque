@@ -9,4 +9,7 @@ ADD dockerfiles/disque.conf /etc/disque.conf
 RUN chmod +x /usr/local/bin/disque
 RUN chmod +x /usr/local/bin/disque-server
 
+RUN apk add --no-cache gcc python3-dev
+RUN python -m pip install hiredis
+
 CMD ["/usr/local/bin/disque-server", "/etc/disque.conf", "--port", "$DISQUE_PORT"]
