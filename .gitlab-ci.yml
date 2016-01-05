@@ -3,7 +3,8 @@
 Prepare container:
   stage: build
   script:
-    - docker build -t errorist/aiodisque:latest .
+    - rocker build .
+    # - docker build -t errorist/aiodisque:latest .
   tags:
     - docker-build
 
