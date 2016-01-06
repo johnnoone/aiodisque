@@ -1,5 +1,9 @@
 ---
 
+stages:
+  - build
+  - test
+
 Prepare container:
   stage: build
   script:
