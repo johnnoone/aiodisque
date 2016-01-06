@@ -342,7 +342,6 @@ class Disque:
         to return all the elements but may return duplicated elements.
 
         Parameters:
-
             count (int): An hit about how much work to do per iteration
             busyloop (bool): Block and return all the elements in a busy loop
             minlen (int): Don't return elements with less than
@@ -390,7 +389,6 @@ class Disque:
         to return all the elements but may return duplicated elements.
 
         Parameters:
-
             count (int): An hit about how much work to do per iteration
             busyloop (bool): Block and return all the elements in a busy loop
             queue (str): Return only jobs in the specified queue
