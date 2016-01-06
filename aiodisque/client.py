@@ -1,7 +1,11 @@
 from .connections import Connection
+from .iterators import JScanIterator, QScanIterator
 from .util import grouper
+from collections import namedtuple
 
-__all__ = ['Disque', 'Job']
+__all__ = ['Disque', 'Job', 'Cursor']
+
+Cursor = namedtuple('Cursor', 'cursor, items')
 
 
 class Job:
@@ -44,13 +48,8 @@ class Disque:
 
         Parameters:
 
-            queue (str): is the name of the queue, any string, basically.
-                         You don't need to create queues, if it does not
-                         exist, it gets created automatically. If it has no
-                         longer jobs, it gets removed.
-            job (str): is a string representing the job. Disque is job meaning
-                       agnostic, for it a job is just a message to deliver.
-                       Job max size is 4GB.
+            queue (str): name of the queue
+            job (str): string representing the job. Max size is 4GB.
             ms_timeout (int): is the command timeout in milliseconds. If no
                               ASYNC is specified, and the replication level
                               specified is not reached in the specified number
@@ -61,11 +60,9 @@ class Disque:
                               delivered later. Note that the actual timeout
                               resolution is 1/10 of second or worse with the
                               default server hz
-            replicate (int): is the number of nodes the job should be
-                             replicated to
-            delay (int): in sec is the number of seconds that should elapse
-                         before the job is queued by any server. By default
-                         there is no delay
+            replicate (int): number of nodes the job should be replicated to
+            delay (int): number of seconds that should elapse before the job
+                         is queued by any server
             retry (int): in sec period after which, if no ACK is received, the
                          job is put again into the queue for delivery. If
                          RETRY is 0, the job has at-most-once delivery
@@ -74,9 +71,9 @@ class Disque:
                          of TTL is less than 5 minutes. In this case the
                          default RETRY is set to TTL/10 (with a minimum value
                          of 1 second)
-            ttl (int): in sec is the max job life in seconds. After this time,
-                       the job is deleted even if it was not successfully
-                       delivered. If not specified, the default TTL is one day
+            ttl (int): max job life in seconds. After this time, the job is
+                       deleted even if it was not successfully delivered.
+                       If not specified, the default TTL is one day
             maxlen (int): count specifies that if there are already count
                           messages queued for the specified queue name, the
                           message is refused and an error reported to the
@@ -86,7 +83,6 @@ class Disque:
                           The job gets queued ASAP, while normally the job is
                           put into the queue only when the client gets a
                           positive reply.
-
         Returns:
             str: Job ID of the added job
         """
@@ -106,44 +102,29 @@ class Disque:
         response = await self.execute_command(*params)
         return response
 
-    async def info(self):
-        """Generic server information / stats
-        """
-        response = await self.execute_command('INFO')
-        result = {}
-        for line in response.splitlines():
-            if not line:
-                continue
-            if line.startswith('#'):
-                continue
-            k, _, v = line.partition(':')
-            result[k] = v
-        return result
-
     async def getjob(self, *queues, nohang=None, timeout=None, count=None,
                      withcounters=None):
         """Return jobs available in one of the specified queues
 
         Return jobs available or NULL if the timeout is reached.
-        A single job per call is returned unless a count greater than 1 is
-        specified. Jobs are returned as a three elements array containing the
-        queue name, the Job ID, and the job body itself. If jobs are available
-        into multiple queues, queues are processed left to right.
 
         If there are no jobs for the specified queues the command blocks, and
         messages are exchanged with other nodes, in order to move messages
         about these queues to this node, so that the client can be served.
 
         Parameters:
-            nohang (bool): Ask the command to don't block even if there are
+            nohang (bool): ask the command to don't block even if there are
                            no jobs in all the specified queues. This way the
                            caller can just check if there are available jobs
-                           without blocking at all.
+                           without blocking at all
+            timeout (int): in micro seconds.
+                           returns NULL if the timeout is reached
+            count (int): a single job per call is returned unless a count
+                         greater than 1 is specified
             withcounters (bool): Return the best-effort count of NACKs
                                  (negative acknowledges) received by this job,
                                  and the number of additional deliveries
-                                 performed for this ob. See the Dead Letters
-                                 section for more information.
+                                 performed for this job
         """
         assert queues, 'At least one queue required'
         params = ['GETJOB']
@@ -211,16 +192,17 @@ class Disque:
         return response
 
     async def working(self, job):
-        """Claims to be still working with the specified job,
-        and asks Disque to postpone the next time it will deliver
+        """Claims to be still working with the specified job
+
+        It asks Disque to postpone the next time it will deliver
         again the job. The next delivery is postponed for the job retry time,
         however the command works in a best effort way since there is no way
         to guarantee during failures that another node in a different network
         partition is performing a delivery of the same job.
 
-        returns the number of seconds you (likely) postponed the message
-        visiblity for other workers:
-
+        Returns:
+            int: number of seconds you (likely) postponed the message
+                 visiblity for other workers
         """
         params = ['WORKING']
         params.append(getattr(job, 'id', job))
@@ -228,7 +210,7 @@ class Disque:
         return response
 
     async def nack(self, *jobs):
-        """The NACK command tells Disque to put back the job in the queue ASAP.
+        """Tells Disque to put back the job in the queue ASAP.
 
         It is very similar to ENQUEUE but it increments the job nacks counter
         instead of the additional-deliveries counter. The command should be
@@ -239,8 +221,21 @@ class Disque:
         params = ['NACK']
         params.extend(getattr(job, 'id', job) for job in jobs)
         response = await self.execute_command(*params)
-        print('res-', response)
         return response
+
+    async def info(self):
+        """Generic server information / stats
+        """
+        response = await self.execute_command('INFO')
+        result = {}
+        for line in response.splitlines():
+            if not line:
+                continue
+            if line.startswith('#'):
+                continue
+            k, _, v = line.partition(':')
+            result[k] = v
+        return result
 
     async def hello(self):
         """Returns hello
@@ -289,7 +284,8 @@ class Disque:
         return response
 
     async def qpeek(self, queue, count):
-        """Return, without consuming from queue, count jobs.
+        """Return, without consuming from queue, count jobs
+
         If count is positive the specified number of jobs are returned from
         the oldest to the newest (in the same best-effort FIFO order as
         GETJOB). If count is negative the commands changes behavior and
@@ -333,10 +329,11 @@ class Disque:
         """Describe the job
         """
         response = await self.execute_command('SHOW', getattr(job, 'id', job))
-        return response
+        params = {k.replace('-', '_'): v for k, v in grouper(2, response)}
+        return Job(**params)
 
-    async def qscan(self, count=None, *, busyloop=None, minlen=None,
-                    maxlen=None, import_rate=None):
+    async def qscan(self, cursor=None, *, count=None, busyloop=None,
+                    minlen=None, maxlen=None, import_rate=None):
         """The command provides an interface to iterate all the existing
         queues in the local node, providing a cursor in the form of an
         integer that is passed to the next command invocation. During the
@@ -345,7 +342,6 @@ class Disque:
         to return all the elements but may return duplicated elements.
 
         Parameters:
-
             count (int): An hit about how much work to do per iteration
             busyloop (bool): Block and return all the elements in a busy loop
             minlen (int): Don't return elements with less than
@@ -355,11 +351,12 @@ class Disque:
             import_rate <rate>: Only return elements with an job import rate
                                 (from other nodes) >= rate
 
-        The cursor argument can be in any place, the first non matching option
-        that has valid cursor form of an usigned number will be sensed as a
-        valid cursor.
+        Returns:
+            Cursor
         """
-        params = ['QSCAN']
+        params = ['qscan']
+        if cursor is not None:
+            params.append(cursor)
         if count is not None:
             params.extend(('COUNT', count))
         if busyloop is True:
@@ -370,10 +367,19 @@ class Disque:
             params.extend(('MAXLEN', maxlen))
         if import_rate is not None:
             params.extend(('IMPORTRATE ', import_rate))
-        response = await self.execute_command(*params)
-        return response
+        cursor, items = await self.execute_command(*params)
+        return Cursor(int(cursor), items)
 
-    async def jscan(self, cursor, *states, count=None, busyloop=None,
+    def qscan_iterator(self, *, count=None,
+                       minlen=None, maxlen=None, import_rate=None):
+        return QScanIterator(self, count=count, minlen=minlen,
+                             maxlen=maxlen, import_rate=import_rate)
+
+    def jscan_iterator(self, *states, count=None, queue=None, reply=None):
+        return JScanIterator(self, states=states, count=count,
+                             queue=queue, reply=reply)
+
+    async def jscan(self, cursor=None, *states, count=None, busyloop=None,
                     queue=None, reply=None):
         """The command provides an interface to iterate all the existing
         queues in the local node, providing a cursor in the form of an
@@ -383,7 +389,6 @@ class Disque:
         to return all the elements but may return duplicated elements.
 
         Parameters:
-
             count (int): An hit about how much work to do per iteration
             busyloop (bool): Block and return all the elements in a busy loop
             queue (str): Return only jobs in the specified queue
@@ -393,11 +398,12 @@ class Disque:
                          report just the job ID. If all is specified the full
                          job state is returned like for the SHOW command
 
-        The cursor argument can be in any place, the first non matching option
-        that has valid cursor form of an usigned number will be sensed as a
-        valid cursor.
+        Returns:
+            Cursor
         """
-        params = ['JSCAN', cursor]
+        params = ['jscan']
+        if cursor is not None:
+            params.append(cursor)
         if count is not None:
             params.extend(('COUNT', count))
         if busyloop is True:
@@ -407,9 +413,17 @@ class Disque:
         for state in states:
             params.extend(('STATE', state))
         if reply is not None:
-            params.extend(('REPLY ', reply))
-        response = await self.execute_command(*params)
-        return response
+            params.extend(('REPLY', reply))
+        print(params)
+        cursor, items = await self.execute_command(*params)
+        if reply == 'all':
+            result = []
+            for item in items:
+                params = {k.replace('-', '_'): v for k, v in grouper(2, item)}
+                result.append(Job(**params))
+            items = result
+
+        return Cursor(int(cursor), items)
 
     async def pause(self, queue, *options):
         """Control the paused state of a queue
