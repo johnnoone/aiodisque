@@ -6,16 +6,34 @@ from collections import namedtuple
 
 __all__ = ['Disque', 'Job', 'Cursor']
 
-Cursor = namedtuple('Cursor', 'cursor, items')
+class Cursor(namedtuple('_Cursor', 'cursor, items')):
+    """
+    Attributes:
+        cursor (str): the cursor id
+        items (list): list of items
+    """
 
 
 class Job:
+    """
+    Attributes:
+        queue (str): the queue name
+        id (str): the job id
+        body (str): the job body
+    """
 
-    def __init__(self, queue, id, body, **kwargs):
+    def __init__(self, queue, id, body, **opts):
+        """
+        Parameters:
+            queue (str): the queue name
+            id (str): the job id
+            body (str): the job body
+            **opts: any options
+        """
         self.queue = queue
         self.id = id
         self.body = body
-        for k, v in kwargs.items():
+        for k, v in opts.items():
             setattr(self, k, v)
 
     def __repr__(self):
@@ -40,17 +58,17 @@ class Disque:
 
     async def addjob(self, queue, job, ms_timeout=0, *, replicate=None,
                      delay=None, retry=None, ttl=None,
-                     maxlen=None, asap=False):
+                     maxlen=None, asynchronous=False):
         """Adds a job to the specified queue
 
-        The command returns the Job ID of the added job, assuming ASYNC is
-        specified, or if the job was replicated correctly to the specified
-        number of nodes. Otherwise an error is returned.
+        The command returns the Job ID of the added job, assuming
+        ``asynchronous`` is specified, or if the job was replicated
+        correctly to the specified number of nodes. Otherwise an error
+        is returned.
 
         Parameters:
-
             queue (str): name of the queue
-            job (str): string representing the job. Max size is 4GB.
+            job (Job): string representing the job
             ms_timeout (int): is the command timeout in milliseconds. If no
                               ASYNC is specified, and the replication level
                               specified is not reached in the specified number
@@ -79,15 +97,17 @@ class Disque:
                           messages queued for the specified queue name, the
                           message is refused and an error reported to the
                           client
-            asap (bool): asks the server to let the command return ASAP and
-                          replicate the job to other nodes in the background.
-                          The job gets queued ASAP, while normally the job is
-                          put into the queue only when the client gets a
-                          positive reply.
+            asynchronous (bool): asks the server to let the command return
+                                 asap and replicate the job to other nodes
+                                 in the background.
+                                 The job gets queued asynchronous, while
+                                 normally the job is put into the queue only
+                                 when the client gets a positive reply.
+
         Returns:
-            str: Job ID of the added job
+            A ``str`` representing the id of the added job
         """
-        params = ['ADDJOB', queue, job, ms_timeout]
+        params = ['ADDJOB', queue, getattr(job, 'body', job), ms_timeout]
         if replicate is not None:
             params.extend(('REPLICATE', replicate))
         if delay is not None:
@@ -98,7 +118,7 @@ class Disque:
             params.extend(('TTL', ttl))
         if maxlen is not None:
             params.extend(('MAXLEN', maxlen))
-        if asap is True:
+        if asynchronous is True:
             params.append('ASYNC')
         response = await self.execute_command(*params)
         return response
@@ -107,25 +127,23 @@ class Disque:
                      withcounters=None):
         """Return jobs available in one of the specified queues
 
-        Return jobs available or NULL if the timeout is reached.
-
         If there are no jobs for the specified queues the command blocks, and
         messages are exchanged with other nodes, in order to move messages
         about these queues to this node, so that the client can be served.
 
         Parameters:
             nohang (bool): ask the command to don't block even if there are
-                           no jobs in all the specified queues. This way the
-                           caller can just check if there are available jobs
-                           without blocking at all
-            timeout (int): in micro seconds.
-                           returns NULL if the timeout is reached
-            count (int): a single job per call is returned unless a count
-                         greater than 1 is specified
-            withcounters (bool): Return the best-effort count of NACKs
-                                 (negative acknowledges) received by this job,
+                           no jobs in all the specified queues
+            timeout (int): in micro seconds
+            count (int): number of jobs per calls
+            withcounters (bool): Return the best-effort count of negative
+                                 acknowledges received by this job,
                                  and the number of additional deliveries
                                  performed for this job
+            *queues: list of queue names, with one required
+        Returns:
+            Returns a list of :class:`Job` or ``None`` if ``timeout``
+            is reached.
         """
         assert queues, 'At least one queue required'
         params = ['GETJOB']
@@ -145,32 +163,35 @@ class Disque:
 
     def getjob_iter(self, *queues, nohang=None, timeout=None, count=None,
                     withcounters=None):
+        """Returns an async iterator for getjob command.
+
+        It accepts the same parameters than :meth:`~Disque.getjob`.
+
+        Yields:
+            Job
+        """
         assert queues, 'At least one queue required'
         return JobsIterator(self, *queues, nohang=nohang, timeout=timeout,
                             count=count, withcounters=withcounters)
 
     async def ackjob(self, *jobs):
-        """Acknowledges the execution of one or more jobs via job IDs
+        """Acknowledges the execution of one or more jobs
 
-        The node receiving the ACK will replicate it to multiple nodes and
-        will try to garbage collect both the job and the ACKs from the
-        cluster so that memory can be freed.
+        The node receiving the ACK will replicate it to multiple nodes
+        and will try to garbage collect both the job and the ACKs from
+        the cluster so that memory can be freed.
 
-        A node receiving an ACKJOB command about a job ID it does not know,
-        will create a special empty job, with the state set to "acknowledged",
-        called a "dummy ACK". The dummy ACK is used in order to retain the
-        acknowledge during a netsplit if the ACKJOB is send to a node that
-        does not have a copy of the job. When the partition heals, a job
-        garbage collection will be attempted.
+        .. note::
 
-        However since the job ID encodes information about the job being an
-        "at most once" or an "at least once" job, the dummy ACK is only
-        created for at least once jobs.
+            A node receiving an :meth:`~Disque.ackjob` command about a job ID
+            it does not know will create a special empty job with the state
+            set to `acknowledged`.
 
-        Accepts Job instances and job_id
+        Parameters:
+            *jobs: a list of :class:`Job` or job id
 
-        Returns
-            int: total of really acknowledged jobs
+        Returns:
+            The total of really acknowledged jobs
         """
         assert jobs, 'At least one job required'
         params = ['ACKJOB']
@@ -179,18 +200,19 @@ class Disque:
         return response
 
     async def fastack(self, *jobs):
-        """Performs a best effort cluster wide deletion of the specified job
-        IDs.
+        """Performs a best effort cluster wide deletion
 
         When the network is well connected and there are no node failures,
-        this is equivalent to ACKJOB but much faster (less messages exchanged),
-        however during failures it is more likely that fast acknowledges will
-        result into multiple deliveries of the same messages.
+        this is equivalent to :meth:`~Disque.ackjob` but much faster (less
+        messages exchanged), however during failures it is more likely that
+        fast acknowledges will result into multiple deliveries of the same
+        messages.
 
-        Accepts Job instances and job_id
+        Parameters:
+            *jobs: a list of :class:`Job` or job id
 
         Returns:
-            int: total of really acknowledged jobs
+            The total of really acknowledged jobs
         """
         assert jobs, 'At least one job required'
         params = ['FASTACK']
@@ -201,15 +223,18 @@ class Disque:
     async def working(self, job):
         """Claims to be still working with the specified job
 
-        It asks Disque to postpone the next time it will deliver
-        again the job. The next delivery is postponed for the job retry time,
-        however the command works in a best effort way since there is no way
-        to guarantee during failures that another node in a different network
-        partition is performing a delivery of the same job.
+        It asks to postpone the next time it will deliver again the job.
+        The next delivery is postponed for the job retry time, however the
+        command works in a best effort way since there is no way to guarantee
+        during failures that another node in a different network partition is
+        performing a delivery of the same job.
+
+        Parameters:
+            job (Job): a :class:`Job` or job id
 
         Returns:
-            int: number of seconds you (likely) postponed the message
-                 visiblity for other workers
+            The number of seconds you (likely) postponed the message
+            visibility for other workers
         """
         params = ['WORKING']
         params.append(getattr(job, 'id', job))
@@ -217,12 +242,16 @@ class Disque:
         return response
 
     async def nack(self, *jobs):
-        """Tells Disque to put back the job in the queue ASAP.
+        """Tells Disque to put back the job in the queue asynchronous.
 
-        It is very similar to ENQUEUE but it increments the job nacks counter
-        instead of the additional-deliveries counter. The command should be
-        used when the worker was not able to process a message and wants the
-        message to be put back into the queue in order to be processed again
+        It is very similar to :meth:`~Disque.enqueue` but it increments the
+        job nacks counter instead of the additional-deliveries counter.
+        The command should be used when the worker was not able to process a
+        message and wants the message to be put back into the queue in order
+        to be processed again.
+
+        Parameters:
+            job (Job): a :class:`Job` or job id
         """
         assert jobs, 'At least one job required'
         params = ['NACK']
@@ -232,6 +261,9 @@ class Disque:
 
     async def info(self):
         """Generic server information / stats
+
+        Returns:
+            dict
         """
         response = await self.execute_command('INFO')
         result = {}
@@ -250,8 +282,11 @@ class Disque:
         hello format version, this node ID, all the nodes IDs, IP addresses,
         ports, and priority (lower is better, means node more available).
 
-        Clients should use this as an handshake command when connecting with
-        a Disque node
+        It should be used as an handshake command when connecting with a
+        Disque node
+
+        Returns:
+            dict
         """
         response = await self.execute_command('HELLO')
         result = {k: v for k, v in zip(['format', 'id', 'nodes'], response)}
@@ -265,6 +300,11 @@ class Disque:
 
     async def qlen(self, queue):
         """Return the length of the queue
+
+        Parameters:
+            queue (str): the queue name
+        Returns:
+            The length of the queue
         """
         response = await self.execute_command('QLEN', queue)
         return response
@@ -284,6 +324,11 @@ class Disque:
         So the non existance of a queue does not mean there are not jobs in
         the node or in the whole cluster about this queue. The queue will be
         immediately created again when needed to serve requests.
+
+        Parameters:
+            queue (str): the queue name
+        Returns:
+            dict
         """
         response = await self.execute_command('QSTAT', queue)
         if response is not None:
@@ -297,6 +342,16 @@ class Disque:
         the oldest to the newest (in the same best-effort FIFO order as
         GETJOB). If count is negative the commands changes behavior and
         shows the count newest jobs, from the newest from the oldest.
+
+
+        Parameters:
+            queue (str): the queue name
+            count (int): If positive the specified number of jobs are
+                         returned from the oldest to the newest.
+                         If negative it returns newest jobs, from the
+                         newest to the oldest.
+        Returns:
+            list: list of :class:`Job`
         """
         response = await self.execute_command('QPEEK', queue, count)
         if response is not None:
@@ -304,6 +359,9 @@ class Disque:
 
     async def enqueue(self, *jobs):
         """Queue jobs if not already queued
+
+        Parameters:
+            job (Job): a :class:`Job` or job id
         """
         assert jobs, 'At least one job required'
         params = ['ENQUEUE']
@@ -313,6 +371,9 @@ class Disque:
 
     async def dequeue(self, *jobs):
         """Remove the job from the queue
+
+        Parameters:
+            job (Job): a :class:`Job` or job id
         """
         assert jobs, 'At least one job required'
         params = ['DEQUEUE']
@@ -323,8 +384,12 @@ class Disque:
     async def deljob(self, *jobs):
         """Completely delete a job from a node
 
-        Note that this is similar to FASTACK, but limited to a single node
-        since no DELJOB cluster bus message is sent to other nodes
+        Note that this is similar to :meth:`~Disque.fastack`, but limited to
+        a single node since no :meth:`~Disque.deljob` cluster bus message is
+        sent to other nodes.
+
+        Parameters:
+            job (Job): a :class:`Job` or job id
         """
         assert jobs, 'At least one job required'
         params = ['DELJOB']
@@ -334,6 +399,9 @@ class Disque:
 
     async def show(self, job):
         """Describe the job
+
+        Returns:
+            Job
         """
         response = await self.execute_command('SHOW', getattr(job, 'id', job))
         params = {k.replace('-', '_'): v for k, v in grouper(2, response)}
@@ -349,6 +417,7 @@ class Disque:
         to return all the elements but may return duplicated elements.
 
         Parameters:
+            cursor (int): the next cursor id
             count (int): An hit about how much work to do per iteration
             busyloop (bool): Block and return all the elements in a busy loop
             minlen (int): Don't return elements with less than
@@ -357,7 +426,6 @@ class Disque:
                           count jobs queued
             import_rate <rate>: Only return elements with an job import rate
                                 (from other nodes) >= rate
-
         Returns:
             Cursor
         """
@@ -379,10 +447,24 @@ class Disque:
 
     def qscan_iter(self, *, count=None,
                    minlen=None, maxlen=None, import_rate=None):
+        """
+
+        It accepts the same parameters than :meth:`~Disque.qscan`.
+
+        Yields:
+            queue name
+        """
         return QueuesScanner(self, count=count, minlen=minlen,
                              maxlen=maxlen, import_rate=import_rate)
 
     def jscan_iter(self, *states, count=None, queue=None, reply=None):
+        """
+
+        It accepts the same parameters than :meth:`~Disque.jscan`.
+
+        Yields:
+            Job: the job
+        """
         return JobsScanner(self, states=states, count=count, queue=queue,
                            reply=reply)
 
@@ -396,15 +478,15 @@ class Disque:
         to return all the elements but may return duplicated elements.
 
         Parameters:
+            cursor (int): the next cursor id
             count (int): An hit about how much work to do per iteration
-            busyloop (bool): Block and return all the elements in a busy loop
+            busyloop (bool): return all the elements in a busy loop
             queue (str): Return only jobs in the specified queue
-            states (str): Return jobs in the specified state. Can be used
-                          multiple times for a logic OR
+            *states: Return jobs in the specified state.
+                     Can be used multiple times for a logic OR.
             reply (str): Job reply type. Type can be all or id. Default is to
                          report just the job ID. If all is specified the full
                          job state is returned like for the SHOW command
-
         Returns:
             Cursor
         """
@@ -439,10 +521,23 @@ class Disque:
         Disque queues can be paused in both directions, input and output or
         both. Pausing a queue makes it not available for input or output
         operations
+
+        Parameters:
+            queue (str): the queue name
+            *options: list of options
+        Returns:
+            str
         """
         assert options, 'at least one option required'
         response = await self.execute_command('PAUSE', queue, *options)
         return response
 
     async def execute_command(self, *args):
+        """Sends a raw command to disque server
+
+        Parameters:
+            *args: command arguments
+        Returns:
+            object: the server response
+        """
         return await self.current_connection.send_command(*args)

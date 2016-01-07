@@ -1,6 +1,8 @@
 from collections import deque
 from collections.abc import AsyncIterator
 
+__all__ = ['JobsScanner', 'QueuesScanner']
+
 
 class ScannerIterator(AsyncIterator):
 
@@ -37,6 +39,18 @@ class JobsScanner(ScannerIterator):
 
     def __init__(self, client, *,
                  states=None, count=None, queue=None, reply=None):
+        """Iter thru jobs.
+
+        Parameters:
+            client (Disque): disque client
+            count (int): An hit about how much work to do per iteration
+            queue (str): Return only jobs in the specified queue
+            states (str): Return jobs in the specified state. Can be used
+                          multiple times for a logic OR
+            reply (str): Job reply type. Type can be all or id. Default is to
+                         report just the job ID. If all is specified the full
+                         job state is returned like for the SHOW command
+        """
         func = client.jscan
         func_args = states or []
         func_kwargs = {
@@ -51,6 +65,18 @@ class QueuesScanner(ScannerIterator):
 
     def __init__(self, client, *,
                  count=None, minlen=None, maxlen=None, import_rate=None):
+        """Iter thru queues.
+
+        Parameters:
+            client (Disque): disque client
+            count (int): An hit about how much work to do per iteration
+            minlen (int): Don't return elements with less than
+                          count jobs queued
+            maxlen (int): Don't return elements with more than
+                          count jobs queued
+            import_rate <rate>: Only return elements with an job import rate
+                                (from other nodes) >= rate
+        """
         func = client.qscan
         func_args = []
         func_kwargs = {
