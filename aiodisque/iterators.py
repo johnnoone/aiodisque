@@ -90,7 +90,7 @@ class JobsIterator(AsyncIterator):
             By default it will returns the exacts jobs found, but sometimes
             we need to garanty the same number of slots.
             For this case  filling ``padding`` and ``count`` values will
-            fill results with ``None` slots.
+            fill results with ``None`` slots.
         """
         jobs = await self.client.getjob(*self.args, **self.kwargs)
         if jobs and self.padding:
