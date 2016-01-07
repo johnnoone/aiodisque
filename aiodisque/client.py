@@ -1,5 +1,6 @@
 from .connections import Connection
-from .iterators import JScanIterator, QScanIterator
+from .iterators import JobsIterator
+from .scanners import JobsScanner, QueuesScanner
 from .util import grouper
 from collections import namedtuple
 
@@ -141,6 +142,12 @@ class Disque:
         response = await self.execute_command(*params)
         if response is not None:
             return render_jobs(response)
+
+    def getjob_iter(self, *queues, nohang=None, timeout=None, count=None,
+                    withcounters=None):
+        assert queues, 'At least one queue required'
+        return JobsIterator(self, *queues, nohang=nohang, timeout=timeout,
+                            count=count, withcounters=withcounters)
 
     async def ackjob(self, *jobs):
         """Acknowledges the execution of one or more jobs via job IDs
@@ -370,14 +377,14 @@ class Disque:
         cursor, items = await self.execute_command(*params)
         return Cursor(int(cursor), items)
 
-    def qscan_iterator(self, *, count=None,
-                       minlen=None, maxlen=None, import_rate=None):
-        return QScanIterator(self, count=count, minlen=minlen,
+    def qscan_iter(self, *, count=None,
+                   minlen=None, maxlen=None, import_rate=None):
+        return QueuesScanner(self, count=count, minlen=minlen,
                              maxlen=maxlen, import_rate=import_rate)
 
-    def jscan_iterator(self, *states, count=None, queue=None, reply=None):
-        return JScanIterator(self, states=states, count=count,
-                             queue=queue, reply=reply)
+    def jscan_iter(self, *states, count=None, queue=None, reply=None):
+        return JobsScanner(self, states=states, count=count, queue=queue,
+                           reply=reply)
 
     async def jscan(self, cursor=None, *states, count=None, busyloop=None,
                     queue=None, reply=None):
