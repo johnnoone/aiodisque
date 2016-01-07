@@ -20,7 +20,7 @@ RUN cd disque-${DISQUE_VERSION} \
     && rm -rf disque-${DISQUE_VERSION}
 RUN chmod +x /usr/local/bin/disque
 RUN chmod +x /usr/local/bin/disque-server
-RUN python -m pip install hiredis pytest pytest-cov pytest-flake8
+RUN python -m pip install hiredis pytest pytest-cov pytest-flake8 twine wheel
 
 EXPOSE $DISQUE_PORT
 

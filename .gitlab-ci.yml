@@ -3,6 +3,7 @@
 stages:
   - build
   - test
+  - release
 
 Prepare container:
   stage: build
@@ -20,3 +21,15 @@ Test:
     - py.test tests/ --cov aiodisque --cov-report term-missing --flake8
   tags:
     - python3.5
+
+Release to pypi:
+  stage: release
+  image: errorist/aiodisque:latest
+  script:
+    - python setup.py sdist bdist_wheel
+    - twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*
+  tags:
+    - python3.5
+  only:
+    - /^v[\d\.]+.*$/
+  allow_failure: true

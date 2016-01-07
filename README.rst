@@ -1,7 +1,7 @@
 AIO Disque
 ==========
 
-Python3.5 & Asyncio client for disque_ message broker.
+Python3.5 & Asyncio client for Disque_ message broker.
 
 
 Installation
@@ -23,6 +23,7 @@ Usage::
     client = Disque()
     job_id = await client.sendjob('queue', 'body')
 
+
 API Reference
 -------------
 
@@ -30,7 +31,7 @@ The `official Disque command documentation`_ does a great job of explaining
 each command in detail. There are a few exceptions:
 
 * each method are lowered
-* async keywords are replaced by asap
+* ``async`` keywords are replaced by asynchronous
 
 In addition to the changes above, it implements some async sugar:
 
@@ -45,7 +46,7 @@ In addition to the changes above, it implements some async sugar:
     async for job in client.jscan_iter(count=128):
         print(job)
 
-* mimic an asyncio Queue::
+* There is also an experimentaton that try to mimic an asyncio.Queue::
 
     from aiodisque.queue import Queue
     queue = JobsQueue('queue', client)
@@ -53,5 +54,5 @@ In addition to the changes above, it implements some async sugar:
     job = await queue.get()
     assert job.id == job_id
 
-.. _disque: https://github.com/antirez/disque
+.. _Disque: https://github.com/antirez/disque
 .. _`official Disque command documentation`: https://github.com/antirez/disque#main-api

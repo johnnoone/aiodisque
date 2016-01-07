@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import versioneer
 
 setup(
     name='aiodisque',
     version=versioneer.get_version(),
+    author='Xavier Barbosa',
+    author_email='clint.northwood@gmail.com',
+    description='Asyncio Disque client',
+    packages=find_packages(),
     install_requires=[
         'hiredis'
     ],
@@ -19,7 +23,11 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
-    keywords=['message broker'],
+    keywords=[
+        'infrastructure',
+        'message broker',
+        'asyncio'
+    ],
     url='https://lab.errorist.xyz/aio/aiodisque',
     license='MIT',
     cmdclass=versioneer.get_cmdclass()

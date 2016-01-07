@@ -7,13 +7,13 @@ class JobsQueue:
 
     class Empty(Exception):
         """
-        Exception raised when non-blocking :meth:`~EventsQueue.get`
+        Exception raised when non-blocking :meth:`~JobsQueue.get`
         is called on a :class:`JobsQueue` object which is empty.
         """
 
     class Full(Exception):
         """
-        Exception raised when :meth:`~EventsQueue.put` is called on a
+        Exception raised when :meth:`~JobsQueue.put` is called on a
         :class:`JobsQueue` object which is full.
         """
 
@@ -78,7 +78,8 @@ class JobsQueue:
         job = getattr(job, 'body', job)
         response = await self.client.addjob(self.name, job, ms_timeout=0,
                                             replicate=None, delay=None,
-                                            retry=None, ttl=None, asap=False,
+                                            retry=None, ttl=None,
+                                            asynchronous=False,
                                             maxlen=self.maxsize or None)
         return response
 
