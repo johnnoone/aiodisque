@@ -30,7 +30,7 @@ async def test_get_nowait(node, event_loop):
 async def test_put(node, event_loop):
     client = Disque(node.port, loop=event_loop)
     queue = JobsQueue('q', client, loop=event_loop)
-    job_id = await queue.put('job')
+    await queue.put('job')
     response = await client.getjob('q')
     assert len(response) == 1
     job = response[0]

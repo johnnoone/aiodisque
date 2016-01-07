@@ -14,7 +14,8 @@ Then start to play with it:
 
     from aiodisque import Disque
     client = Disque()
-    await for job1, job2 in client.getjob_iter('my-queue', nohang=True, count=2):
+    jobs = client.getjob_iter('my-queue', nohang=True, count=2, padding=True)
+    await for job1, job2 in jobs:
         print('-', job1.id, job1.body)
         print('-', job2.id, job2.body)
 

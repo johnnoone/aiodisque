@@ -6,6 +6,7 @@ from collections import namedtuple
 
 __all__ = ['Disque', 'Job', 'Cursor']
 
+
 class Cursor(namedtuple('_Cursor', 'cursor, items')):
     """
     Attributes:
@@ -162,17 +163,20 @@ class Disque:
             return render_jobs(response)
 
     def getjob_iter(self, *queues, nohang=None, timeout=None, count=None,
-                    withcounters=None):
+                    withcounters=None, padding=None):
         """Returns an async iterator for getjob command.
 
         It accepts the same parameters than :meth:`~Disque.getjob`.
 
+        Parameters:
+            padding (int): if count is set, it will pad results
         Yields:
             Job
         """
         assert queues, 'At least one queue required'
         return JobsIterator(self, *queues, nohang=nohang, timeout=timeout,
-                            count=count, withcounters=withcounters)
+                            count=count, withcounters=withcounters,
+                            padding=padding)
 
     async def ackjob(self, *jobs):
         """Acknowledges the execution of one or more jobs

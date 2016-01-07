@@ -35,7 +35,7 @@ each command in detail. There are a few exceptions:
 
 In addition to the changes above, it implements some async sugar:
 
-* iterators::
+* Fancy async iterators::
 
     async for jobs in client.client.getjob_iter('q', nohang=True):
         print(jobs)
