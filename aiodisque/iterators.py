@@ -1,61 +1,27 @@
-from collections import deque
+from collections.abc import AsyncIterator
 
 
-class Iterator:
+class JobsIterator(AsyncIterator):
 
-    def __init__(self, func, func_args, func_kwargs):
-        self.cursor = 0
-        self.buffer = deque()
-        self.state = 'waiting'
-        self.func = func
-        self.func_args = func_args
-        self.func_kwargs = func_kwargs
+    def __init__(self, client, *queues, nohang=None, timeout=None,
+                 count=None, withcounters=None):
+        self.client = client
+        self.args = queues
+        self.kwargs = {
+            'nohang': nohang,
+            'timeout': timeout,
+            'count': count,
+            'withcounters': withcounters
+        }
 
     async def __aiter__(self):
-        self.cursor = 0
-        self.state == 'waiting'
         return self
 
     async def __anext__(self):
-        if not self.buffer:
-            await self.fetch_data()
-        if self.buffer:
-            return self.buffer.popleft()
+        jobs = await self.get()
+        if jobs:
+            return jobs
         raise StopAsyncIteration()
 
-    async def fetch_data(self):
-        if self.state != 'finished':
-            self.cursor, data = await self.func(self.cursor,
-                                                *self.func_args,
-                                                **self.func_kwargs)
-            self.state = 'finished' if self.cursor == 0 else 'running'
-            self.buffer.extend(data)
-
-
-class JScanIterator(Iterator):
-
-    def __init__(self, client, *,
-                 states=None, count=None, queue=None, reply=None):
-        func = client.jscan
-        func_args = states or []
-        func_kwargs = {
-            'count': count,
-            'queue': queue,
-            'reply': reply
-        }
-        super().__init__(func, func_args, func_kwargs)
-
-
-class QScanIterator(Iterator):
-
-    def __init__(self, client, *,
-                 count=None, minlen=None, maxlen=None, import_rate=None):
-        func = client.qscan
-        func_args = []
-        func_kwargs = {
-            'count': count,
-            'minlen': minlen,
-            'maxlen': maxlen,
-            'import_rate': import_rate
-        }
-        super().__init__(func, func_args, func_kwargs)
+    async def get(self):
+        return await self.client.getjob(*self.args, **self.kwargs)
