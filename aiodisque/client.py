@@ -54,6 +54,18 @@ def render_jobs(response):
 
 class Disque:
 
+    """
+    ``client`` accepts a tcp or unix address::
+
+        client = Disque(address='127.0.0.1:7711')
+        client = Disque(address=('127.0.0.1', 7711))
+        client = Disque(address='/path/to/socket')
+
+    Parameters:
+        client (Address): a tcp or unix address
+        loop (EventLoop): asyncio loop
+    """
+
     def __init__(self, address, *, loop=None):
         self.current_connection = Connection(address, loop=loop)
 

@@ -23,6 +23,12 @@ Usage::
     client = Disque()
     job_id = await client.sendjob('queue', 'body')
 
+``client`` accepts a tcp or unix address::
+
+    client = Disque(address='127.0.0.1:7711')
+    client = Disque(address=('127.0.0.1', 7711))
+    client = Disque(address='/path/to/socket')
+
 
 API Reference
 -------------

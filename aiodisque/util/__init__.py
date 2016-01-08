@@ -1,3 +1,4 @@
+from .addresses_util import *
 from itertools import zip_longest
 
 __all__ = ['parse_address', 'encode_command']
@@ -7,24 +8,6 @@ def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return zip_longest(fillvalue=fillvalue, *args)
-
-
-def parse_address(address, *, host=None, port=None):
-    host, port = host or 'localhost', port
-    if isinstance(address, (list, tuple)):
-        host, port = address
-    if isinstance(address, int):
-        port = address
-    elif isinstance(address, str):
-        if ':' in address:
-            a, _, b = address.partition(':')
-            host = a or host
-            port = b or port
-        elif address.isdigit():
-            port = int(address)
-        else:
-            host = address or host
-    return host, int(port) if port else None
 
 
 _converters = {
@@ -41,7 +24,8 @@ def _bytes_len(sized):
 
 
 def encode_command(*args):
-    """Encodes arguments into redis bulk-strings array.
+    """Encodes arguments into redis bulk-strings array
+
     Raises TypeError if any of args not of bytes, str, int or float type.
     """
     buf = bytearray()
