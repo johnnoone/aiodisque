@@ -1,3 +1,4 @@
+import os.path
 from pytest import fixture
 from tempfile import TemporaryDirectory
 from subprocess import Popen, PIPE, run
@@ -16,12 +17,15 @@ class DisqueNode:
         self.port = port
         self.dir = dir
         self.proc = None
+        self.socket = os.path.join(dir, 'disque.sock')
 
     def start(self):
         if not self.proc:
             cmd = ["disque-server",
                    "--port", str(self.port),
-                   "--dir", self.dir]
+                   "--dir", self.dir,
+                   "--unixsocket", self.socket,
+                   "--unixsocketperm", "755"]
             self.proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
 
         cmd = ['disque', '-p', str(self.port), 'info']
@@ -39,7 +43,7 @@ class DisqueNode:
 
     @property
     def configuration(self):
-        return Configuration(port=self.port, dir=self.dir)
+        return Configuration(port=self.port, dir=self.dir, socket=self.socket)
 
 
 @fixture(scope='function')

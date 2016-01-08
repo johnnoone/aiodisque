@@ -13,6 +13,16 @@ async def test_hello(node, event_loop):
 
 
 @pytest.mark.asyncio
+async def test_unix(node, event_loop):
+    client = Disque(node.socket, loop=event_loop)
+    response = await client.hello()
+    assert isinstance(response, dict)
+    assert 'format' in response
+    assert 'nodes' in response
+    assert 'id' in response
+
+
+@pytest.mark.asyncio
 async def test_info(node, event_loop):
     client = Disque(node.port, loop=event_loop)
     response = await client.info()
