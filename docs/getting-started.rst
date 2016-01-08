@@ -28,4 +28,30 @@ Some changes must be noticed:
 * commands are coroutines and thay names are lowered.
 * ``async`` is a reserved word in Python, everyfields are renamed asynchronous
 
+
+Other goodies
+-------------
+
+``padding`` with ``count`` ensure that iteration will returns the same number
+of slots:
+
+.. code-block:: python
+
+    from aiodisque import Disque
+    client = Disque()
+    await client.addjob('my-queue', 'job-1')
+    jobs = client.getjob_iter('my-queue', nohang=True, count=2, padding=True)
+    await for job1, job2 in jobs:
+        print('- job1:', job1.id, job1.body)
+        print('- job2 is null:', job2 is None)
+
+``auto_reconnect`` tries to handle half-closed connection, lost and back
+connection...
+
+.. code-block:: python
+
+    from aiodisque import Disque
+    client = Disque(auto_reconnect=True)
+
+
 .. _`original API`: https://github.com/antirez/disque#main-api

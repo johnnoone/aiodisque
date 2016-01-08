@@ -14,18 +14,13 @@ ok = [
     (12, Address(proto='tcp', address=('127.0.0.1', 12))),
 
     ('/tmp/disque.sock', Address(proto='unix', address='/tmp/disque.sock')),
-    ('unix:///tmp/disque.sock', Address(proto='unix', address='/tmp/disque.sock')),
+    ('unix:///foo/bar.sock', Address(proto='unix', address='/foo/bar.sock')),
 
     (Address(proto='foo', address='bar'), Address(proto='foo', address='bar')),
 ]
 
-fail = [
-    ('a',),
-    ('a', 'b', 'c'),
-    ['a',],
-    ['a', 'b', 'c'],
-    {},
-]
+fail = [('a',), ('a', 'b', 'c'), ['a'], ['a', 'b', 'c'], {}]
+
 
 @pytest.mark.parametrize("input,expected", ok)
 def test_parse_ok(input, expected):

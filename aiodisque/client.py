@@ -1,4 +1,4 @@
-from .connections import Connection
+from .connections import connect, ClosedConnectionError
 from .iterators import JobsIterator
 from .scanners import JobsScanner, QueuesScanner
 from .util import grouper
@@ -64,10 +64,15 @@ class Disque:
     Parameters:
         client (Address): a tcp or unix address
         loop (EventLoop): asyncio loop
+        auto_reconnect (bool): automatically reconnect after connection lost
     """
 
-    def __init__(self, address, *, loop=None):
-        self.current_connection = Connection(address, loop=loop)
+    def __init__(self, address, *, auto_reconnect=None, loop=None):
+        self.address = address
+        self.loop = loop
+        self.auto_reconnect = auto_reconnect
+        self._connection = None
+        self._closed = False
 
     async def addjob(self, queue, job, ms_timeout=0, *, replicate=None,
                      delay=None, retry=None, ttl=None,
@@ -304,6 +309,7 @@ class Disque:
         Returns:
             dict
         """
+
         response = await self.execute_command('HELLO')
         result = {k: v for k, v in zip(['format', 'id', 'nodes'], response)}
         nodes = []
@@ -519,7 +525,6 @@ class Disque:
             params.extend(('STATE', state))
         if reply is not None:
             params.extend(('REPLY', reply))
-        print(params)
         cursor, items = await self.execute_command(*params)
         if reply == 'all':
             result = []
@@ -556,4 +561,52 @@ class Disque:
         Returns:
             object: the server response
         """
-        return await self.current_connection.send_command(*args)
+        try:
+            # naively assume that connection is still ok
+            connection = await self.connect()
+            return await connection.send_command(*args)
+        except ClosedConnectionError:
+            # resend to a freshly opened connection
+            connection = await self.connect(force=True)
+            return await connection.send_command(*args)
+
+    async def connect(self, *, force=False):
+        """Connect to the disque server
+
+        Parameters:
+            force (bool): exchange to a fresh connection
+        Returns:
+            Connection
+        """
+
+        if force or not self._connection:
+            if self._connection:
+                self._connection.close()
+
+            if self._closed:
+                raise RuntimeError('Connection already closed')
+
+            listeners = set()
+            if self.auto_reconnect:
+                listeners.add(self.reset_connection)
+
+            connection = await connect(self.address,
+                                       loop=self.loop,
+                                       closed_listeners=listeners)
+            self._connection = connection
+        return self._connection
+
+    def close(self):
+        """Close the current connection
+        """
+        self._closed = True
+        if self._connection:
+            self._connection.close()
+            self._connection = None
+
+    def reset_connection(self):
+        """Reset the current connection
+        """
+        if self._connection:
+            self._connection.close()
+            self._connection = None

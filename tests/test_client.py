@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from aiodisque import Disque, ConnectionError
 
@@ -5,16 +6,6 @@ from aiodisque import Disque, ConnectionError
 @pytest.mark.asyncio
 async def test_hello(node, event_loop):
     client = Disque(node.port, loop=event_loop)
-    response = await client.hello()
-    assert isinstance(response, dict)
-    assert 'format' in response
-    assert 'nodes' in response
-    assert 'id' in response
-
-
-@pytest.mark.asyncio
-async def test_unix(node, event_loop):
-    client = Disque(node.socket, loop=event_loop)
     response = await client.hello()
     assert isinstance(response, dict)
     assert 'format' in response
@@ -303,3 +294,79 @@ async def test_qscan(node, event_loop):
         if not cursor:
             break
     assert found_queues == queues
+
+
+@pytest.mark.asyncio
+async def test_close_connection(node, event_loop):
+    client = Disque(node.port, loop=event_loop)
+    await client.hello()
+    client.close()
+    with pytest.raises(RuntimeError):
+        await client.hello()
+
+
+@pytest.mark.asyncio
+async def test_close_reconnection(node, event_loop):
+    client = Disque(node.port, loop=event_loop, auto_reconnect=True)
+    await client.hello()
+    client.close()
+    with pytest.raises(RuntimeError):
+        await client.hello()
+
+
+@pytest.mark.asyncio
+async def test_close_autoreconnection(node, event_loop):
+
+    server = Wrapper(5678, node.port)
+    await server.start()
+    client = Disque(server.port, loop=event_loop, auto_reconnect=True)
+    await client.hello()
+    server.close()
+
+    # really really closed connection
+    with pytest.raises(ConnectionRefusedError):
+        await client.hello()
+
+    # connection get back
+    await server.start()
+    await client.hello()
+
+    # half-closed connection
+    server.close()
+    await server.start()
+    await client.hello()
+
+
+class Wrapper:
+
+    def __init__(self, port, redirect_port, *, loop=None):
+        self.redirect_port = redirect_port
+        self.port = port
+        self.loop = loop
+
+    async def start(self):
+        self.server = await asyncio.start_server(self.handle,
+                                                 '127.0.0.1',
+                                                 self.port,
+                                                 loop=self.loop)
+        sockets = await asyncio.open_connection('127.0.0.1',
+                                                self.redirect_port,
+                                                loop=self.loop)
+        self.reader, self.writer = sockets
+
+    def close(self):
+        if self.writer:
+            self.writer.close()
+            self.writer = None
+        if self.server:
+            self.server.close()
+            self.server = None
+        self.reader = None
+
+    async def handle(self, reader, writer):
+        data = await reader.read(10000)
+        self.writer.write(data)
+        data = await self.reader.read(10000)
+        writer.write(data)
+        await writer.drain()
+        writer.close()
