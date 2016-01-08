@@ -1,3 +1,6 @@
+.. py:module:: aiodisque
+.. _getting-started:
+
 Getting started
 ===============
 
@@ -31,6 +34,22 @@ Some changes must be noticed:
 
 Other goodies
 -------------
+
+:meth:`Disque.getjob` returns a single job by default. but it will return a
+list if ``count`` is set:
+
+.. code-block:: python
+
+    from aiodisque import Disque
+    client = Disque()
+
+    # get a job instance
+    await client.addjob('my-queue', 'job-1')
+    job = await client.getjob('my-queue')
+
+    # get a list of job instances
+    await client.addjob('my-queue', 'job-2')
+    jobs = await client.getjob('my-queue', count=1)
 
 ``padding`` with ``count`` ensure that iteration will returns the same number
 of slots:

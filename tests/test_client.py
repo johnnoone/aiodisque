@@ -1,6 +1,6 @@
 import asyncio
 import pytest
-from aiodisque import Disque, ConnectionError
+from aiodisque import Disque, ConnectionError, Job
 
 
 @pytest.mark.asyncio
@@ -51,9 +51,8 @@ async def test_job(node, event_loop):
     job_id = await client.addjob('foo', 'bar')
     assert job_id.startswith('D-')
 
-    response = await client.getjob('foo')
-    assert isinstance(response, list)
-    job = response[0]
+    job = await client.getjob('foo')
+    assert isinstance(job, Job)
     assert hasattr(job, 'id')
     assert hasattr(job, 'body')
     assert hasattr(job, 'body')
@@ -72,14 +71,26 @@ async def test_job(node, event_loop):
 
 
 @pytest.mark.asyncio
+async def test_many_jobs(node, event_loop):
+    client = Disque(node.port, loop=event_loop)
+    job_id = await client.addjob('foo', 'bar')
+    job_id = await client.addjob('foo', 'baz')
+    assert job_id.startswith('D-')
+
+    jobs = await client.getjob('foo', count=2)
+    assert isinstance(jobs, list)
+    assert isinstance(jobs[0], Job)
+    assert isinstance(jobs[1], Job)
+
+
+@pytest.mark.asyncio
 async def test_job_fastack(node, event_loop):
     client = Disque(node.port, loop=event_loop)
     job_id = await client.addjob('foo', 'bar')
     assert job_id.startswith('D-')
 
-    response = await client.getjob('foo')
-    assert isinstance(response, list)
-    job = response[0]
+    job = await client.getjob('foo')
+    assert isinstance(job, Job)
     assert hasattr(job, 'id')
     assert hasattr(job, 'body')
     assert hasattr(job, 'body')
@@ -103,9 +114,8 @@ async def test_job_working(node, event_loop):
     job_id = await client.addjob('foo', 'bar')
     assert job_id.startswith('D-')
 
-    response = await client.getjob('foo')
-    assert isinstance(response, list)
-    job = response[0]
+    job = await client.getjob('foo')
+    assert isinstance(job, Job)
     assert hasattr(job, 'id')
     assert hasattr(job, 'body')
     assert hasattr(job, 'body')
@@ -133,9 +143,8 @@ async def test_job_withcounters(node, event_loop):
     job_id = await client.addjob('foo', 'bar')
     assert job_id.startswith('D-')
 
-    response = await client.getjob('foo', withcounters=True)
-    assert isinstance(response, list)
-    job = response[0]
+    job = await client.getjob('foo', withcounters=True)
+    assert isinstance(job, Job)
     assert hasattr(job, 'id')
     assert hasattr(job, 'body')
     assert hasattr(job, 'queue')

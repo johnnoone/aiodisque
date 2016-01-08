@@ -46,9 +46,9 @@ class JobsQueue:
         If queue is empty, wait until an item is available.
         See also The empty() method.
         """
-        jobs = await self.client.getjob(self.name, nohang=False,
-                                        withcounters=None)
-        return jobs.pop()
+        job = await self.client.getjob(self.name, nohang=False,
+                                       withcounters=None)
+        return job
 
     def get_nowait(self, withcounters=None):
         """Remove and return an item from the queue
