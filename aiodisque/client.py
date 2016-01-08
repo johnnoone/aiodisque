@@ -160,8 +160,8 @@ class Disque:
                                  performed for this job
             *queues: list of queue names, with one required
         Returns:
-            Returns a list of :class:`Job` or ``None`` if ``timeout``
-            is reached.
+            It returns a single :class:`Job` if ``count`` is empty,
+            None if ``timeout`` is reached, a list otherwise.
         """
         assert queues, 'At least one queue required'
         params = ['GETJOB']
@@ -177,7 +177,10 @@ class Disque:
         params.extend(queues)
         response = await self.execute_command(*params)
         if response is not None:
-            return render_jobs(response)
+            jobs = render_jobs(response)
+            if count is None:
+                return jobs.pop()
+            return jobs
 
     def getjob_iter(self, *queues, nohang=None, timeout=None, count=None,
                     withcounters=None, padding=None):
@@ -188,7 +191,7 @@ class Disque:
         Parameters:
             padding (int): if count is set, it will pad results
         Yields:
-            Job
+            A single :class:`Job` or a list
         """
         assert queues, 'At least one queue required'
         return JobsIterator(self, *queues, nohang=nohang, timeout=timeout,
@@ -446,8 +449,8 @@ class Disque:
                           count jobs queued
             maxlen (int): Don't return elements with more than
                           count jobs queued
-            import_rate <rate>: Only return elements with an job import rate
-                                (from other nodes) >= rate
+            import_rate (obj): Only return elements with an job import rate
+                               (from other nodes) >= rate
         Returns:
             Cursor
         """

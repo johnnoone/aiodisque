@@ -13,6 +13,22 @@ async def test_queues(node, event_loop):
 
     it = client.getjob_iter('q', nohang=True)
     results = set()
+    async for job in it:
+        results.add(job.id)
+    assert results == expected
+    assert isinstance(it, JobsIterator)
+
+
+@pytest.mark.asyncio
+async def test_queues_count(node, event_loop):
+    client = Disque(node.port, loop=event_loop)
+    expected = set()
+    for i in range(0, 256):
+        res = await client.addjob('q', 'job-%s' % i, 5000, replicate=1, retry=0)
+        expected.add(res)
+
+    it = client.getjob_iter('q', nohang=True, count=2)
+    results = set()
     async for jobs in it:
         results.update(job.id for job in jobs)
     assert results == expected
