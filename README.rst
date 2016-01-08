@@ -60,5 +60,13 @@ In addition to the changes above, it implements some async sugar:
     job = await queue.get()
     assert job.id == job_id
 
+* client can reconnect automatically when a connection lost::
+
+    from aiodisque import Disque
+    client = Disque(auto_reconnect=True)
+    await client.hello()
+    # ... connection has been lost here...
+    await client.hello()  # this not fails
+
 .. _Disque: https://github.com/antirez/disque
 .. _`official Disque command documentation`: https://github.com/antirez/disque#main-api
