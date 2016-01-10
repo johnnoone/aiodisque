@@ -33,3 +33,14 @@ Release to pypi:
   only:
     - /^v[\d\.]+.*$/
   allow_failure: true
+
+Upload documentation:
+  stage: release
+  image: errorist/aiodisque:latest
+  script:
+    - curl -X POST http://readthedocs.org/build/aio-disque
+  tags:
+    - python3.5
+  only:
+    - master
+  allow_failure: true
