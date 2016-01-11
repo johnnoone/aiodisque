@@ -15,10 +15,10 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-* :doc:`getting-started`
-* :doc:`reference`
+   getting-started
+   reference
 
 
 Installation
@@ -54,5 +54,7 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
+
+Documentation generated for version |version| and |release|.
 
 .. _Disque: https://github.com/antirez/disque

@@ -3,6 +3,8 @@
 AIODisque Reference Manual
 ==========================
 
+This manual lists the basic functionality provided by aiodisque.
+
 .. autoclass:: Disque
    :members:
    :undoc-members:
