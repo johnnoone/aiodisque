@@ -52,25 +52,6 @@ class PyGeneratorMethod(PyGeneratorMixin, PyClassmember):
         return PyClassmember.run(self)
 
 
-class PyCoroutineMixin(object):
-    def handle_signature(self, sig, signode):
-        ret = super().handle_signature(sig, signode)
-        signode.insert(0, addnodes.desc_annotation('coroutine ', 'coroutine '))
-        return ret
-
-
-class PyCoroutineFunction(PyCoroutineMixin, PyModulelevel):
-    def run(self):
-        self.name = 'py:function'
-        return PyModulelevel.run(self)
-
-
-class PyCoroutineMethod(PyCoroutineMixin, PyClassmember):
-    def run(self):
-        self.name = 'py:method'
-        return PyClassmember.run(self)
-
-
 class PyTaskMixin(object):
     def handle_signature(self, sig, signode):
         ret = super().handle_signature(sig, signode)
@@ -106,11 +87,11 @@ class FunctionDocumenter(FunctionDocumenter):
         if getattr(obj, '_is_task', False):
             self.directivetype = 'task'
             self.member_order = self.member_order + 2
-        elif inspect.isawaitable(obj):
+        elif inspect.iscoroutinefunction(obj):
             self.directivetype = 'async'
             self.member_order = self.member_order + 2
         elif getattr(obj, '_is_coroutine', False):
-            self.directivetype = 'coroutine'
+            self.directivetype = 'async'
             self.member_order = self.member_order - 2
         elif inspect.isgeneratorfunction(obj):
             self.directivetype = 'generator'
@@ -134,11 +115,11 @@ class MethodDocumenter(MethodDocumenter):
         if getattr(obj, '_is_task', False):
             self.directivetype = 'taskmethod'
             self.member_order = self.member_order - 2
-        elif inspect.isawaitable(obj):
+        elif inspect.iscoroutinefunction(obj):
             self.directivetype = 'asyncmethod'
             self.member_order = self.member_order + 2
         elif getattr(obj, '_is_coroutine', False):
-            self.directivetype = 'coroutinemethod'
+            self.directivetype = 'asyncmethod'
             self.member_order = self.member_order - 2
         elif inspect.isgeneratorfunction(obj):
             self.directivetype = 'generatormethod'
@@ -152,9 +133,6 @@ def setup(app):
 
     app.add_directive_to_domain('py', 'generator', PyGeneratorFunction)
     app.add_directive_to_domain('py', 'generatormethod', PyGeneratorMethod)
-
-    app.add_directive_to_domain('py', 'coroutine', PyCoroutineFunction)
-    app.add_directive_to_domain('py', 'coroutinemethod', PyCoroutineMethod)
 
     app.add_directive_to_domain('py', 'task', PyTaskFunction)
     app.add_directive_to_domain('py', 'taskmethod', PyTaskMethod)

@@ -1,8 +1,5 @@
-.. py:module:: aiodisque
-.. _getting-started:
-
-Getting started
-===============
+AIODisque Getting started
+=========================
 
 
 Install from Pypi:
