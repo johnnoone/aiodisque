@@ -1,8 +1,7 @@
 .. py:module:: aiodisque
-.. _api:
 
-API
-===
+AIODisque Reference Manual
+==========================
 
 .. autoclass:: Disque
    :members:
