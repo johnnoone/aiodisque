@@ -1,7 +1,7 @@
 AIO Disque
 ==========
 
-Python3.5 & Asyncio client for Disque_ message broker.
+async/await client for Disque_ message broker.
 
 
 Installation
@@ -28,6 +28,24 @@ Usage::
     client = Disque(address='127.0.0.1:7711')
     client = Disque(address=('127.0.0.1', 7711))
     client = Disque(address='/path/to/socket')
+
+
+Using curio
+-----------
+
+By default this client will work with asyncio_ event loop.
+There is an experimental implementation with curio_.
+For this you will need to install the curio dependencies::
+
+    python -m pip install aiodisque[curio]
+
+And then in your code, hack the connector::
+
+    from aiodisque import Disque
+    from aiodisque.connections.curio import connect as curio_connector
+
+    client = Disque(connector=curio_connector)
+    await client.addjob('q', 'job')
 
 
 API Reference
@@ -70,3 +88,5 @@ In addition to the changes above, it implements some async sugar:
 
 .. _Disque: https://github.com/antirez/disque
 .. _`official Disque command documentation`: https://github.com/antirez/disque#main-api
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _curio: http://curio.readthedocs.org

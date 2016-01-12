@@ -18,9 +18,20 @@ Test:
   script:
     - python -m pip install -e .
     - python -m pip install -r requirements-test.txt
-    - py.test tests/ --cov aiodisque --cov-report term-missing --flake8
+    - py.test tests/ --cov aiodisque --cov-report term-missing --flake8 -m "not curio"
   tags:
     - python3.5
+
+Test curio:
+  stage: test
+  image: errorist/aiodisque:latest
+  script:
+    - python -m pip install -e .
+    - python -m pip install -r requirements-test.txt
+    - py.test tests/ --cov aiodisque --cov-report term-missing --flake8 -m curio
+  tags:
+    - python3.5
+  allow_failure: true
 
 Release to pypi:
   stage: release

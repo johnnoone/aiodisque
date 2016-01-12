@@ -29,6 +29,29 @@ Some changes must be noticed:
 * ``async`` is a reserved word in Python, everyfields are renamed asynchronous
 
 
+Event loops
+-----------
+
+This client works well with asyncio_, it is the default.
+
+It also have a experimental implementation with curio_.
+For using it, install the dependencies:
+
+.. code-block:: shell
+
+    $ python -m pip install aiodisque[curio]
+
+And then hack with it:
+
+.. code-block:: python
+
+    from aiodisque import Disque
+    from aiodisque.connections.curio import connect as curio_connector
+
+    client = Disque(connector=curio_connector)
+    await client.addjob('q', 'job')
+
+
 Other goodies
 -------------
 
@@ -71,3 +94,5 @@ connection...
 
 
 .. _`original API`: https://github.com/antirez/disque#main-api
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _curio: http://curio.readthedocs.org

@@ -63,16 +63,17 @@ class Disque:
 
     Parameters:
         client (Address): a tcp or unix address
-        loop (EventLoop): asyncio loop
         auto_reconnect (bool): automatically reconnect after connection lost
+        *opts (dict): options for connector
     """
 
-    def __init__(self, address, *, auto_reconnect=None, loop=None):
+    def __init__(self, address, *, auto_reconnect=None, **opts):
         self.address = address
-        self.loop = loop
         self.auto_reconnect = auto_reconnect
         self._connection = None
         self._closed = False
+        self.connector = opts.pop('connector', connect)
+        self.connector_opts = opts
 
     async def addjob(self, queue, job, ms_timeout=0, *, replicate=None,
                      delay=None, retry=None, ttl=None,
@@ -593,9 +594,9 @@ class Disque:
             if self.auto_reconnect:
                 listeners.add(self.reset_connection)
 
-            connection = await connect(self.address,
-                                       loop=self.loop,
-                                       closed_listeners=listeners)
+            connection = await self.connector(self.address,
+                                              closed_listeners=listeners,
+                                              **self.connector_opts)
             self._connection = connection
         return self._connection
 

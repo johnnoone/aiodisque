@@ -1,26 +1,9 @@
 import asyncio
-import hiredis
-from .util import parse_address, encode_command
+from aiodisque.util import parse_address, encode_command
+from .exceptions import ConnectionError, ClosedConnectionError, ProtocolError
+from .bases import ConnectionBase, parser
 
-__all__ = ['connect', 'Connection', 'ConnectionError']
-
-
-def parser():
-    return hiredis.Reader(protocolError=ProtocolError,
-                          replyError=ConnectionError,
-                          encoding='utf-8')
-
-
-class ConnectionError(RuntimeError):
-    pass
-
-
-class ClosedConnectionError(ConnectionError):
-    pass
-
-
-class ProtocolError(ConnectionError):
-    pass
+__all__ = ['connect', 'Connection']
 
 
 async def connect(address, *, loop=None, closed_listeners=None):
@@ -28,19 +11,24 @@ async def connect(address, *, loop=None, closed_listeners=None):
     """
     address = parse_address(address, host='127.0.0.1', port=7711)
 
-    if address.proto == 'tcp':
-        host, port = address.address
-        future = asyncio.open_connection(host=host, port=port, loop=loop)
-    elif address.proto == 'unix':
-        path = address.address
-        future = asyncio.open_unix_connection(path=path, loop=loop)
-    reader, writer = await future
+    try:
+        if address.proto == 'tcp':
+            host, port = address.address
+            future = asyncio.open_connection(host=host, port=port, loop=loop)
+        elif address.proto == 'unix':
+            path = address.address
+            future = asyncio.open_unix_connection(path=path, loop=loop)
+        reader, writer = await future
+    except ConnectionRefusedError as error:
+        raise error
+    except Exception as error:
+        raise ConnectionError() from error
     return Connection(reader, writer,
                       loop=loop,
                       closed_listeners=closed_listeners)
 
 
-class Connection:
+class Connection(ConnectionBase):
 
     def __init__(self, reader, writer, *, loop=None, closed_listeners=None):
         self._loop = loop

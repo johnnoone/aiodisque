@@ -1,5 +1,3 @@
-import asyncio
-
 __all__ = ['JobsQueue']
 
 
@@ -17,7 +15,7 @@ class JobsQueue:
         :class:`JobsQueue` object which is full.
         """
 
-    def __init__(self, queue, client, *, maxsize=0, loop=None):
+    def __init__(self, queue, client, *, maxsize=0):
         """Constructor for a FIFO queue
 
         maxsize is an integer that sets the upperbound limit on the number of
@@ -28,7 +26,6 @@ class JobsQueue:
         self.name = queue
         self.client = client
         self.maxsize = maxsize
-        self.loop = loop or asyncio.get_event_loop()
 
     def empty(self):
         """Return True if the queue is empty, False otherwise
