@@ -12,6 +12,8 @@ prepare container:
     - docker build -t errorist/aiodisque:latest .
   tags:
     - docker-build
+  except:
+    - docs
 
 test:
   stage: test
@@ -22,6 +24,8 @@ test:
     - py.test tests/ --cov aiodisque --cov-report term-missing --flake8
   tags:
     - python3.5
+  except:
+    - docs
 
 release to pypi:
   stage: release
