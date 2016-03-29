@@ -342,7 +342,7 @@ class Disque:
         listed above. They may be (unlikely) removed or more can be (likely)
         added in the future.
 
-        If a queue does not exist, NULL is returned. Note that queues are
+        If a queue does not exist, None is returned. Note that queues are
         automatically evicted after some time if empty and without clients
         blocked waiting for jobs, even if there are active jobs for the queue.
 
@@ -544,13 +544,17 @@ class Disque:
         possibly broadcasting the command to other nodes in the cluster.
         Disque queues can be paused in both directions, input and output or
         both. Pausing a queue makes it not available for input or output
-        operations
+        operations.
+
+        The command always returns the state of the queue after the execution
+        of the specified options, so the return value is one of `in`, `out`,
+        `all` or `none`.
 
         Parameters:
             queue (str): the queue name
             *options: list of options
         Returns:
-            str
+            str: one of "in", "out", "all" or "none" value
         """
         assert options, 'at least one option required'
         response = await self.execute_command('PAUSE', queue, *options)

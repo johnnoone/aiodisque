@@ -28,6 +28,31 @@ Some changes must be noticed:
 * commands are coroutines and thay names are lowered.
 * ``async`` is a reserved word in Python, everyfields are renamed asynchronous
 
+Natural Python
+--------------
+
+This library tries to make a natural bridge between Python idioms like
+iterators, queues and disque_:
+
+* Fancy async iterators::
+
+    async for jobs in client.client.getjob_iter('q', nohang=True):
+        print(jobs)
+
+    async for queue in client.qscan_iter(count=128):
+        print(queue)
+
+    async for job in client.jscan_iter(count=128):
+        print(job)
+
+* There is also an experimentaton that try to mimic an asyncio.Queue::
+
+    from aiodisque.queue import Queue
+    queue = JobsQueue('queue', client)
+    job_id = await queue.put('job')
+    job = await queue.get()
+    assert job.id == job_id
+
 
 Other goodies
 -------------

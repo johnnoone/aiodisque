@@ -3,16 +3,17 @@
 stages:
   - build
   - test
+  - documentation
   - release
 
-Prepare container:
+prepare container:
   stage: build
   script:
     - docker build -t errorist/aiodisque:latest .
   tags:
     - docker-build
 
-Test:
+test:
   stage: test
   image: errorist/aiodisque:latest
   script:
@@ -22,7 +23,7 @@ Test:
   tags:
     - python3.5
 
-Release to pypi:
+release to pypi:
   stage: release
   image: errorist/aiodisque:latest
   script:
@@ -34,7 +35,7 @@ Release to pypi:
     - /^v[\d\.]+.*$/
   allow_failure: true
 
-Upload documentation:
+notify RTFD:
   stage: release
   image: errorist/aiodisque:latest
   script:
@@ -44,3 +45,18 @@ Upload documentation:
   only:
     - master
   allow_failure: true
+
+pages:
+  stage: documentation
+  script:
+    - python -m pip install sphinx
+    - python -m pip install -r docs/requirements.txt
+    - sphinx-build -b html docs public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
+    - docs
+  tags:
+    - python3.5
