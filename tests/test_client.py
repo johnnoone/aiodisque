@@ -50,6 +50,7 @@ async def test_job(node, event_loop):
     client = Disque(node.port, loop=event_loop)
     job_id = await client.addjob('foo', 'bar')
     assert job_id.startswith('D-')
+    assert len(job_id) == 40
 
     job = await client.getjob('foo')
     assert isinstance(job, Job)

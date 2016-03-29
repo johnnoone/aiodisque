@@ -42,4 +42,4 @@ def encode_command(*args):
             continue
         raise TypeError("Argument {!r} expected to be of bytes,"
                         " str, int or float type".format(arg))
-    return buf
+    return bytes(buf)

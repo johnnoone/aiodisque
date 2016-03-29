@@ -68,5 +68,18 @@ In addition to the changes above, it implements some async sugar:
     # ... connection has been lost here...
     await client.hello()  # this not fails
 
+For more details about the python implementation, you can consult the
+`AIO Disque documentation`_.
+
+
+TODO
+----
+
+* use state object instead of str for pause.
+* more tests for qstat.
+* handle -PAUSED errors and None queues (qstat).
+* document pur python/asyncio feature.
+
 .. _Disque: https://github.com/antirez/disque
 .. _`official Disque command documentation`: https://github.com/antirez/disque#main-api
+.. _`AIO Disque documentation`: http://aio.pages.errorist.xyz/aiodisque
