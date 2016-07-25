@@ -1,7 +1,7 @@
 .. py:module:: aiodisque
 
-AIODisque Reference Manual
-==========================
+References
+==========
 
 This manual lists the basic functionality provided by aiodisque.
 

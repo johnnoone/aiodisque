@@ -3,6 +3,9 @@ AIO Disque
 
 Python3.5 & Asyncio client for Disque_ message broker.
 
+Sources are available at https://lab.errorist.xyz/aio/aiodisque,
+and mirrored at https://github.com/johnnoone/aiodisque.
+
 
 Installation
 ------------

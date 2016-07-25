@@ -1,14 +1,7 @@
-AIODisque Getting started
-=========================
+Getting started
+===============
 
-
-Install from Pypi:
-
-.. code-block:: shell
-
-    $ python -m pip install aiodisque
-
-Then start to play with it:
+Start to play with it:
 
 .. code-block:: python
 
@@ -45,7 +38,7 @@ iterators, queues and disque_:
     async for job in client.jscan_iter(count=128):
         print(job)
 
-* There is also an experimentaton that try to mimic an asyncio.Queue::
+* There is also an experimentaton that mimic an :ref:`asyncio.Queue`::
 
     from aiodisque.queue import Queue
     queue = JobsQueue('queue', client)

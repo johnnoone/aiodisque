@@ -10,15 +10,7 @@ AIO Disque is a modern client for Disque_ — an ongoing experiment to build a
 distributed, in-memory, message broker — using Python coroutines and the
 explicit async/await introduced in Python3.5.
 
-
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   getting-started
-   reference
+Sources are available at https://lab.errorist.xyz/aio/aiodisque.
 
 
 Installation
@@ -49,11 +41,9 @@ AIO Disque tends to be 100% compatible with the disque api document.
 It provides additional python goodies for queues and results iteration.
 
 
-Indices and tables
-==================
+.. include:: getting-started.rst
 
-* :ref:`genindex`
-* :ref:`search`
+.. include:: reference.rst
 
 Documentation generated for version |version| and |release|.
 
